@@ -2,7 +2,7 @@
 
 A full-stack order management application with partial payment tracking, atomic settlement processing, and derived status computation.
 
-**Live URL:** _(to be added after deployment)_
+**Live URL:** https://crossval-orders.vercel.app
 
 ---
 
