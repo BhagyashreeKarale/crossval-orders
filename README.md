@@ -31,7 +31,7 @@ cp .env.local.example .env.local
 | `MONGODB_URI` | MongoDB connection string (replica set) | Yes |
 | `JWT_SECRET` | Secret for JWT signing (min 32 chars) | Yes |
 
-The application will refuse to start if either variable is missing.
+Both variables are required for the application to function correctly.
 
 ### Run
 
@@ -45,11 +45,14 @@ npm run dev
 # Production build
 npm run build && npm start
 
-# Tests (unit — no DB required)
+# Unit tests (no DB required)
 npm test
 
-# Tests (integration — requires MONGODB_URI)
-MONGODB_URI=<your-uri> npm test
+# Integration tests (requires environment variables)
+# PowerShell:
+$env:MONGODB_URI="<your-uri>"; $env:JWT_SECRET="<your-secret>"; npm test
+# Linux/macOS:
+MONGODB_URI=<your-uri> JWT_SECRET=<your-secret> npm test
 ```
 
 ---
@@ -145,7 +148,7 @@ Payment recording uses a **MongoDB transaction** containing two operations:
 2. **Payment insert** — within the same transaction session
 
 Both succeed or both roll back. This guarantees:
-- **Concurrency safety:** The `$expr` + `$inc` is atomic at the document level (WiredTiger locking). The second concurrent request sees the incremented value and fails the filter.
+- **Concurrency safety:** The conditional `$expr` + `$inc` is evaluated atomically on the order document. Concurrent payment attempts cannot cause `paidCents` to exceed `totalCents`; MongoDB serializes conflicting writes at the document level, and the losing attempt fails the filter condition.
 - **Ledger consistency:** `order.paidCents === SUM(payments.amountCents)` — always. A crash between step 1 and step 2 triggers a transaction rollback, not partial state.
 
 If two payments arrive simultaneously:
@@ -308,4 +311,4 @@ As specified in the assignment:
 3. **Record $600 payment** → Status: `paid`, amount due: $0
 4. **Attempt $1 payment** → Rejected: `"Payment of $1.00 exceeds the remaining amount due of $0.00."`
 
-All verified by automated tests.
+The backend calculation and payment rules are covered by automated tests. The full UI flow was also verified manually against the deployed application.
